@@ -32,6 +32,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Install Nintendo DS development libraries
+        run: dkp-pacman -S --noconfirm nds-dev
       - name: Build
         run: make -C dsi
       - name: Upload NDS application
