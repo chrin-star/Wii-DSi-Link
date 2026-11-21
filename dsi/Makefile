@@ -19,7 +19,7 @@ ifneq ($(BUILD),$(notdir $(CURDIR)))
 CFILES := $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
 OFILES := $(CFILES:.c=.o)
 
-CFLAGS = -O2 -Wall -Wextra $(INCLUDE)
+CFLAGS = -O2 -Wall -Wextra -I$(DEVKITPRO)/libnds/include -I$(DEVKITPRO)/calico/include $(INCLUDE)
 LDFLAGS :=
 
 export OUTPUT := $(CURDIR)/$(TARGET)
