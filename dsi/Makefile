@@ -19,8 +19,9 @@ ifneq ($(BUILD),$(notdir $(CURDIR)))
 CFILES := $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
 OFILES := $(CFILES:.c=.o)
 
-CFLAGS = -O2 -Wall -Wextra -I$(DEVKITPRO)/libnds/include -I$(DEVKITPRO)/calico/include $(INCLUDE)
-LDFLAGS :=
+ARCH := -march=armv5te -mtune=arm946e-s -mthumb
+CFLAGS := -g -Wall -O2 -ffunction-sections -fdata-sections $(ARCH) $(INCLUDE) -DARM9
+LDFLAGS := -specs=ds_arm9.specs $(ARCH)
 
 export OUTPUT := $(CURDIR)/$(TARGET)
 export VPATH := $(foreach dir,$(SOURCES),$(CURDIR)/$(dir))
