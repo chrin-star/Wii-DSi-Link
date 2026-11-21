@@ -5,6 +5,9 @@ $(error "Please set DEVKITPPC in your environment")
 endif
 include $(DEVKITPPC)/wii_rules
 
+# Use the devkitPPC cross-compiler as the linker driver.
+export LD := $(CC)
+
 TARGET := boot
 BUILD := build
 SOURCES := source
