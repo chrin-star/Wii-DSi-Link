@@ -16,6 +16,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Install Wii development libraries
+        run: dkp-pacman -S --noconfirm wii-dev
       - name: Build
         run: make -C wii
       - name: Upload boot.dol
