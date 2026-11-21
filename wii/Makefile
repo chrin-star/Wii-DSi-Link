@@ -16,7 +16,7 @@ LIBDIRS := $(PORTLIBS)
 CFILES := $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
 OFILES := $(CFILES:.c=.o)
 
-CFLAGS := -O2 -Wall $(MACHDEP) $(INCLUDE)
+CFLAGS = -O2 -Wall $(MACHDEP) $(INCLUDE)
 LDFLAGS := $(MACHDEP)
 
 ifneq ($(BUILD),$(notdir $(CURDIR)))
