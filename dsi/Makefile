@@ -20,7 +20,7 @@ CFILES := $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
 OFILES := $(CFILES:.c=.o)
 
 ARCH := -march=armv5te -mtune=arm946e-s -mthumb
-CFLAGS := -g -Wall -O2 -ffunction-sections -fdata-sections $(ARCH) $(INCLUDE) -DARM9
+CFLAGS = -g -Wall -O2 -ffunction-sections -fdata-sections $(ARCH) $(INCLUDE) -DARM9
 LDFLAGS := -specs=ds_arm9.specs $(ARCH)
 
 export OUTPUT := $(CURDIR)/$(TARGET)
