@@ -19,7 +19,7 @@ ifneq ($(BUILD),$(notdir $(CURDIR)))
 CFILES := $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
 OFILES := $(CFILES:.c=.o)
 
-CFLAGS = -O2 -Wall $(MACHDEP) $(INCLUDE)
+CFLAGS = -O2 -Wall $(MACHDEP) -I$(DEVKITPRO)/libogc/include $(INCLUDE)
 LDFLAGS := $(MACHDEP)
 
 export OUTPUT := $(CURDIR)/$(TARGET)
