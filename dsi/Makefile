@@ -5,7 +5,6 @@ $(error "Please set DEVKITARM in your environment")
 endif
 include $(DEVKITARM)/ds_rules
 
-# Use the devkitARM cross-compiler as the linker driver.
 export LD := $(CC)
 
 TARGET := WiiDSiLink
@@ -16,13 +15,13 @@ INCLUDES :=
 LIBS := -lnds9
 LIBDIRS := $(LIBNDS)
 
+ifneq ($(BUILD),$(notdir $(CURDIR)))
 CFILES := $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
 OFILES := $(CFILES:.c=.o)
 
 CFLAGS = -O2 -Wall -Wextra $(INCLUDE)
 LDFLAGS :=
 
-ifneq ($(BUILD),$(notdir $(CURDIR)))
 export OUTPUT := $(CURDIR)/$(TARGET)
 export VPATH := $(foreach dir,$(SOURCES),$(CURDIR)/$(dir))
 export DEPSDIR := $(CURDIR)/$(BUILD)
@@ -30,7 +29,7 @@ export OFILES
 export INCLUDE := $(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) $(foreach dir,$(LIBDIRS),-I$(dir)/include) -I$(CURDIR)/$(BUILD)
 export LIBPATHS := $(foreach dir,$(LIBDIRS),-L$(dir)/lib)
 
-.PHONY: all clean $(BUILD)
+.PHONY: all clean
 all: $(BUILD)
 
 $(BUILD):
