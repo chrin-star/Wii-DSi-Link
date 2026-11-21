@@ -12,7 +12,7 @@ BUILD := build
 SOURCES := source
 DATA :=
 INCLUDES :=
-LIBS := -lwiiuse -lbte -logc
+LIBS := -lwiiuse -lbte -logc -lm
 LIBDIRS := $(PORTLIBS)
 
 ifneq ($(BUILD),$(notdir $(CURDIR)))
