@@ -1,0 +1,41 @@
+name: Build Wii and DSi applications
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-wii:
+    name: Build Wii homebrew
+    runs-on: ubuntu-latest
+    container:
+      image: devkitpro/devkitppc:latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Build
+        run: make -C wii
+      - name: Upload boot.dol
+        uses: actions/upload-artifact@v4
+        with:
+          name: wii-homebrew
+          path: wii/boot.dol
+
+  build-dsi:
+    name: Build DS/DSi homebrew
+    runs-on: ubuntu-latest
+    container:
+      image: devkitpro/devkitarm:latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Build
+        run: make -C dsi
+      - name: Upload NDS application
+        uses: actions/upload-artifact@v4
+        with:
+          name: dsi-homebrew
+          path: dsi/WiiDSiLink.nds
