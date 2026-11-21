@@ -5,6 +5,9 @@ $(error "Please set DEVKITARM in your environment")
 endif
 include $(DEVKITARM)/ds_rules
 
+# Use the devkitARM cross-compiler as the linker driver.
+export LD := $(CC)
+
 TARGET := WiiDSiLink
 BUILD := build
 SOURCES := source
