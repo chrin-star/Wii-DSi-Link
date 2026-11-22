@@ -14,6 +14,45 @@ int socInit(void);
 int socExit(void);
 
 #define TCP_PORT 4242
+#define PACKET_SIZE 5
+
+static int receive_packet(int sock, unsigned char *packet)
+{
+    int total = 0;
+    while (total < PACKET_SIZE) {
+        int n = recv(sock, packet + total, PACKET_SIZE - total, 0);
+        if (n <= 0)
+            return n;
+        total += n;
+    }
+    return total;
+}
+
+static void draw_cursor(int x, int y, int *old_col, int *old_row, int *visible)
+{
+    int col = 2 + (x * 77) / 255;
+    int row = 6 + (y * 20) / 191;
+
+    if (*visible) {
+        printf("\x1b[%d;%dH ", *old_row, *old_col);
+    }
+
+    printf("\x1b[%d;%dH+", row, col);
+    fflush(stdout);
+
+    *old_col = col;
+    *old_row = row;
+    *visible = 1;
+}
+
+static void hide_cursor(int *old_col, int *old_row, int *visible)
+{
+    if (*visible) {
+        printf("\x1b[%d;%dH ", *old_row, *old_col);
+        fflush(stdout);
+        *visible = 0;
+    }
+}
 
 int main(int argc, char **argv)
 {
@@ -36,50 +75,36 @@ int main(int argc, char **argv)
     if (mode->viTVMode & VI_NON_INTERLACE)
         VIDEO_WaitVSync();
 
-    printf("\x1b[2;0H");
-    printf("Wii-DSi-Link - TCP server test\n");
-    printf("--------------------------------\n");
-    printf("Connecting Wii to saved Wi-Fi...\n\n");
+    printf("\x1b[2J\x1b[1;1H");
+    printf("Wii-DSi-Link - TOUCHPAD TEST\n");
+    printf("----------------------------------------\n");
+    printf("Move the stylus on the DSi touch screen.\n");
+    printf("The + cursor follows your finger/stylus.\n\n");
+    printf("Connecting Wii to saved Wi-Fi...\n");
 
     s32 result = net_init();
     if (result != 0) {
         printf("Wi-Fi initialization failed: %d\n", (int)result);
-        printf("\nPress HOME to exit.\n");
-        while (1) {
-            WPAD_ScanPads();
-            if (WPAD_ButtonsDown(0) & WPAD_BUTTON_HOME) break;
-            VIDEO_WaitVSync();
-        }
-        return 0;
+        goto wait_exit_no_network;
     }
 
     if (socInit() != 0) {
         printf("Socket layer initialization failed.\n");
         net_deinit();
-        printf("\nPress HOME to exit.\n");
-        while (1) {
-            WPAD_ScanPads();
-            if (WPAD_ButtonsDown(0) & WPAD_BUTTON_HOME) break;
-            VIDEO_WaitVSync();
-        }
-        return 0;
+        goto wait_exit_no_network;
     }
 
     struct in_addr ip;
     ip.s_addr = net_gethostip();
-    printf("Wi-Fi connection initialized.\n");
-    if (ip.s_addr != 0)
-        printf("Wii IP: %s\n", inet_ntoa(ip));
-    else
-        printf("Could not obtain Wii IP address.\n");
+    printf("Wi-Fi ready. Wii IP: %s\n", ip.s_addr ? inet_ntoa(ip) : "unavailable");
+    printf("Opening TCP port %d...\n", TCP_PORT);
 
-    printf("\nOpening TCP port %d...\n", TCP_PORT);
     int server = socket(AF_INET, SOCK_STREAM, IPPROTO_IP);
     if (server < 0) {
         printf("socket() failed: %d\n", errno);
         socExit();
         net_deinit();
-        return 0;
+        goto wait_exit_no_network;
     }
 
     struct sockaddr_in address;
@@ -93,57 +118,77 @@ int main(int argc, char **argv)
         close(server);
         socExit();
         net_deinit();
-        return 0;
+        goto wait_exit_no_network;
     }
 
     if (listen(server, 1) < 0) {
         printf("listen() failed: %d\n", errno);
         close(server);
+        socExit();
         net_deinit();
-        return 0;
+        goto wait_exit_no_network;
     }
 
     printf("TCP SERVER: READY\n");
     printf("Waiting for DSi at 192.168.1.3...\n");
-    printf("Keep this screen open.\n");
 
     struct sockaddr_in client;
     socklen_t client_len = sizeof(client);
     int connection = accept(server, (struct sockaddr *)&client, &client_len);
 
     if (connection < 0) {
-        printf("\naccept() failed: %d\n", errno);
+        printf("accept() failed: %d\n", errno);
     } else {
-        char message[128];
-        memset(message, 0, sizeof(message));
-        int received = recv(connection, message, sizeof(message) - 1, 0);
-        if (received > 0) {
-            message[received] = '\0';
-            printf("\nDSi connected: %s\n", inet_ntoa(client.sin_addr));
-            printf("Message from DSi:\n%s\n", message);
-            const char reply[] = "HELLO FROM WII";
-            int sent = send(connection, reply, sizeof(reply) - 1, 0);
-            if (sent > 0)
-                printf("\nReply sent to DSi.\n");
-            else
-                printf("\nCould not send reply. Error: %d\n", errno);
-            printf("\nTCP TEST: MESSAGE RECEIVED\n");
-        } else {
-            printf("\nDSi connected, but no message received.\n");
-            printf("recv() result: %d error: %d\n", received, errno);
+        unsigned char packet[PACKET_SIZE];
+        int old_col = 0, old_row = 0, visible = 0;
+        printf("\x1b[2J\x1b[1;1H");
+        printf("Wii-DSi-Link - TOUCHPAD ACTIVE\n");
+        printf("----------------------------------------\n");
+        printf("DSi connected: %s\n", inet_ntoa(client.sin_addr));
+        printf("Move the stylus on the DSi.\n");
+        printf("Press START on DSi to disconnect.\n");
+
+        while (1) {
+            int n = receive_packet(connection, packet);
+            if (n <= 0)
+                break;
+
+            if (packet[0] == 1) {
+                int x = ((int)packet[1] << 8) | packet[2];
+                int y = ((int)packet[3] << 8) | packet[4];
+                if (x > 255) x = 255;
+                if (y > 191) y = 191;
+                draw_cursor(x, y, &old_col, &old_row, &visible);
+            } else if (packet[0] == 0) {
+                hide_cursor(&old_col, &old_row, &visible);
+            }
         }
+
+        hide_cursor(&old_col, &old_row, &visible);
+        printf("\x1b[30;1HDSi disconnected.\n");
         close(connection);
     }
 
     close(server);
-    printf("\nPress HOME to exit.\n");
+    printf("\nPress HOME on the Wii Remote to exit.\n");
     while (1) {
         WPAD_ScanPads();
-        if (WPAD_ButtonsDown(0) & WPAD_BUTTON_HOME) break;
+        if (WPAD_ButtonsDown(0) & WPAD_BUTTON_HOME)
+            break;
         VIDEO_WaitVSync();
     }
 
     socExit();
     net_deinit();
+    return 0;
+
+wait_exit_no_network:
+    printf("\nPress HOME to exit.\n");
+    while (1) {
+        WPAD_ScanPads();
+        if (WPAD_ButtonsDown(0) & WPAD_BUTTON_HOME)
+            break;
+        VIDEO_WaitVSync();
+    }
     return 0;
 }
