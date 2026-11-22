@@ -1,49 +1,71 @@
-.SUFFIXES:
+# BlocksDS Makefile for DSi Wi-Fi with DSi-mode support
 
-ifeq ($(strip $(DEVKITARM)),)
-$(error "Please set DEVKITARM in your environment")
-endif
-include $(DEVKITARM)/ds_rules
+export BLOCKSDS ?= /opt/blocksds/core
+export WONDERFUL_TOOLCHAIN ?= /opt/wonderful
+ARM_NONE_EABI_PATH ?= $(WONDERFUL_TOOLCHAIN)/toolchain/gcc-arm-none-eabi/bin/
 
-export LD := $(CC)
+NAME := WiiDSiLink
+GAME_TITLE := Wii-DSi-Link
+GAME_SUBTITLE := DSi Wi-Fi test
+GAME_AUTHOR := chrin-star
+GAME_ICON := icon.gif
 
-TARGET := WiiDSiLink
-BUILD := build
-SOURCES := source
-DATA :=
-INCLUDES :=
+SOURCEDIRS := source
+INCLUDEDIRS :=
+DEFINES :=
+
+ARM7ELF := $(BLOCKSDS)/sys/arm7/main_core/arm7_dswifi_maxmod.elf
+
 LIBS := -ldswifi9 -lnds9
-LIBDIRS := $(LIBNDS)
+LIBDIRS := $(BLOCKSDS)/libs/dswifi \
+           $(BLOCKSDS)/libs/libnds
 
-ifneq ($(BUILD),$(notdir $(CURDIR)))
-CFILES := $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
-OFILES := $(CFILES:.c=.o)
+BUILDDIR := build/$(NAME)
+ELF := build/$(NAME).elf
+MAP := build/$(NAME).map
+ROM := $(NAME).nds
 
-ARCH := -march=armv5te -mtune=arm946e-s -mthumb
-CFLAGS = -g -Wall -O2 -ffunction-sections -fdata-sections $(ARCH) $(INCLUDE) -DARM9
-LDFLAGS := -specs=ds_arm9.specs $(ARCH)
+PREFIX := $(ARM_NONE_EABI_PATH)arm-none-eabi-
+CC := $(PREFIX)gcc
+LD := $(PREFIX)gcc
+OBJDUMP := $(PREFIX)objdump
 
-export OUTPUT := $(CURDIR)/$(TARGET)
-export VPATH := $(foreach dir,$(SOURCES),$(CURDIR)/$(dir))
-export DEPSDIR := $(CURDIR)/$(BUILD)
-export OFILES
-export CFLAGS
-export LDFLAGS
-export INCLUDE := $(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) $(foreach dir,$(LIBDIRS),-I$(dir)/include) -I$(CURDIR)/$(BUILD)
-export LIBPATHS := $(foreach dir,$(LIBDIRS),-L$(dir)/lib)
+DEFINES += -D__NDS__ -D__BLOCKSDS__ -DARM9
+ARCH := -mthumb -mcpu=arm946e-s+nofp
+SPECS := $(BLOCKSDS)/sys/crts/ds_arm9.specs
+WARNFLAGS := -Wall
+
+LIBS += -lc
+
+INCLUDEFLAGS := $(foreach path,$(INCLUDEDIRS),-I$(path)) \
+                $(foreach path,$(LIBDIRS),-I$(path)/include)
+LIBDIRSFLAGS := $(foreach path,$(LIBDIRS),-L$(path)/lib)
+
+CFLAGS += $(WARNFLAGS) $(INCLUDEFLAGS) $(DEFINES) $(ARCH) -O2 \
+          -ffunction-sections -fdata-sections -specs=$(SPECS)
+LDFLAGS += $(ARCH) $(LIBDIRSFLAGS) -Wl,-Map,$(MAP) $(DEFINES) \
+           -Wl,--start-group $(LIBS) -Wl,--end-group -specs=$(SPECS)
+
+SOURCES_C := $(shell find -L $(SOURCEDIRS) -name "*.c")
+OBJS := $(addsuffix .o,$(addprefix $(BUILDDIR)/,$(SOURCES_C)))
+DEPS := $(OBJS:.o=.d)
 
 .PHONY: all clean
-all: $(BUILD)
+all: $(ROM)
 
-$(BUILD):
-	@mkdir -p $@
-	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
+$(ROM): $(ELF)
+	$(BLOCKSDS)/tools/ndstool/ndstool -c $@ -7 $(ARM7ELF) -9 $(ELF) \
+		-b $(GAME_ICON) "$(GAME_TITLE);$(GAME_SUBTITLE);$(GAME_AUTHOR)"
+
+$(ELF): $(OBJS)
+	@mkdir -p $(@D)
+	$(LD) -o $@ $(OBJS) $(LDFLAGS)
+
+$(BUILDDIR)/%.c.o: %.c
+	@mkdir -p $(@D)
+	$(CC) $(CFLAGS) -MMD -MP -c -o $@ $<
 
 clean:
-	rm -rf $(BUILD) $(TARGET).elf $(TARGET).nds
-else
-DEPENDS := $(OFILES:.o=.d)
-$(OUTPUT).nds: $(OUTPUT).elf
-$(OUTPUT).elf: $(OFILES)
--include $(DEPENDS)
-endif
+	rm -rf $(ROM) $(ELF) $(MAP) build
+
+-include $(DEPS)
