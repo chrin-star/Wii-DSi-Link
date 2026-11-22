@@ -17,7 +17,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Install Wii development libraries
-        run: dkp-pacman -S --noconfirm wii-dev
+        run: dkp-pacman -S --needed --noconfirm wii-dev
       - name: Build
         run: make -C wii
       - name: Upload boot.dol
@@ -35,7 +35,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Install Nintendo DS development libraries
-        run: dkp-pacman -S --noconfirm nds-dev
+        run: dkp-pacman -S --needed --noconfirm nds-dev
       - name: Build
         run: make -C dsi
       - name: Upload NDS application
