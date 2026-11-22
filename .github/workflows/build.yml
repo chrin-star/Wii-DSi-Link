@@ -27,15 +27,15 @@ jobs:
           path: wii/boot.dol
 
   build-dsi:
-    name: Build DS/DSi homebrew
+    name: Build DSi homebrew with BlocksDS (DSi WPA2 support)
     runs-on: ubuntu-latest
     container:
-      image: devkitpro/devkitarm:latest
+      image: skylyrac/blocksds:slim-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Install Nintendo DS development libraries
-        run: dkp-pacman -S --needed --noconfirm nds-dev
+      - name: Download default ROM icon
+        run: curl -fsSL https://raw.githubusercontent.com/blocksds/sdk/master/templates/rom_arm9_only/icon.gif -o dsi/icon.gif
       - name: Build
         run: make -C dsi
       - name: Upload NDS application
