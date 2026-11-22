@@ -9,6 +9,10 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 
+/* Register the BSD socket device used by socket(), bind(), listen(), etc. */
+int socInit(void);
+int socExit(void);
+
 #define TCP_PORT 4242
 
 int main(int argc, char **argv)
@@ -49,6 +53,18 @@ int main(int argc, char **argv)
         return 0;
     }
 
+    if (socInit() != 0) {
+        printf("Socket layer initialization failed.\n");
+        net_deinit();
+        printf("\nPress HOME to exit.\n");
+        while (1) {
+            WPAD_ScanPads();
+            if (WPAD_ButtonsDown(0) & WPAD_BUTTON_HOME) break;
+            VIDEO_WaitVSync();
+        }
+        return 0;
+    }
+
     struct in_addr ip;
     ip.s_addr = net_gethostip();
     printf("Wi-Fi connection initialized.\n");
@@ -61,6 +77,7 @@ int main(int argc, char **argv)
     int server = socket(AF_INET, SOCK_STREAM, IPPROTO_IP);
     if (server < 0) {
         printf("socket() failed: %d\n", errno);
+        socExit();
         net_deinit();
         return 0;
     }
@@ -74,6 +91,7 @@ int main(int argc, char **argv)
     if (bind(server, (struct sockaddr *)&address, sizeof(address)) < 0) {
         printf("bind() failed: %d\n", errno);
         close(server);
+        socExit();
         net_deinit();
         return 0;
     }
@@ -125,6 +143,7 @@ int main(int argc, char **argv)
         VIDEO_WaitVSync();
     }
 
+    socExit();
     net_deinit();
     return 0;
 }
