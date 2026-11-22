@@ -17,6 +17,7 @@
 #define DNS_SERVER "8.8.8.8"
 #define WII_IP "192.168.1.5"
 #define TCP_PORT 4242
+#define PACKET_SIZE 5
 
 static void wait_for_start(void)
 {
@@ -28,15 +29,27 @@ static void wait_for_start(void)
     }
 }
 
-static void show_tcp_result(const char *title, const char *detail)
+static void show_result(const char *title, const char *detail)
 {
     consoleClear();
-    printf("Wii-DSi-Link - TCP test\n");
+    printf("Wii-DSi-Link - TOUCHPAD\n");
     printf("--------------------------------\n");
     printf("%s\n\n", title);
     printf("%s\n", detail);
     printf("\nPress START to exit.\n");
     wait_for_start();
+}
+
+static int send_all(int sock, const unsigned char *data, int length)
+{
+    int total = 0;
+    while (total < length) {
+        int n = send(sock, data + total, length - total, 0);
+        if (n <= 0)
+            return -1;
+        total += n;
+    }
+    return total;
 }
 
 int main(void)
@@ -46,15 +59,17 @@ int main(void)
     int i;
     int found = 0;
     int status = ASSOCSTATUS_DISCONNECTED;
+    int sock;
+    int was_touching = 0;
     Wifi_AccessPoint target;
 
     consoleDemoInit();
-    printf("\nWii-DSi-Link - TCP client test\n");
+    printf("\nWii-DSi-Link - TOUCHPAD\n");
     printf("--------------------------------\n");
     printf("Initializing DSi Wi-Fi mode...\n");
 
     if (!Wifi_InitDefault(INIT_ONLY | WIFI_ATTEMPT_DSI_MODE)) {
-        show_tcp_result("Wi-Fi initialization failed.", "Could not initialize DSi Wi-Fi.");
+        show_result("Wi-Fi initialization failed.", "Could not initialize DSi Wi-Fi.");
         return 0;
     }
 
@@ -83,7 +98,7 @@ int main(void)
             }
 
             consoleClear();
-            printf("Wii-DSi-Link - TCP client test\n");
+            printf("Wii-DSi-Link - TOUCHPAD\n");
             printf("--------------------------------\n");
             printf("Looking for: %s\n", TARGET_SSID);
             printf("Networks detected: %d\n", count);
@@ -96,7 +111,7 @@ int main(void)
     }
 
     if (!found) {
-        show_tcp_result("Target network not found.", "Required: FIBERNET (saved and compatible).");
+        show_result("Target network not found.", "Required: FIBERNET (saved and compatible).");
         return 0;
     }
 
@@ -113,7 +128,7 @@ int main(void)
                0);
 
     if (Wifi_ConnectWfcAP(&target) != 0) {
-        show_tcp_result("Could not start Wi-Fi connection.", "Wifi_ConnectWfcAP returned an error.");
+        show_result("Could not start Wi-Fi connection.", "Wifi_ConnectWfcAP returned an error.");
         return 0;
     }
 
@@ -141,8 +156,7 @@ int main(void)
             printf("Status: %d\n", status);
             printf("Elapsed: %d seconds\n", frames / 60);
             printf("DSi IP: %s\n", inet_ntoa(ip));
-            printf("\nStatic IP test\n");
-            printf("START: cancel\n");
+            printf("\nSTART: cancel\n");
         }
         frames++;
     }
@@ -150,22 +164,20 @@ int main(void)
     if (status != ASSOCSTATUS_ASSOCIATED) {
         char detail[96];
         snprintf(detail, sizeof(detail), "Final Wi-Fi status: %d\nExpected success: %d", status, ASSOCSTATUS_ASSOCIATED);
-        show_tcp_result("Wi-Fi connection did not complete.", detail);
+        show_result("Wi-Fi connection did not complete.", detail);
         return 0;
     }
 
     consoleClear();
     printf("Wi-Fi connection: SUCCESS\n");
     printf("DSi IP: %s\n", DSI_TEST_IP);
-    printf("\nPreparing TCP connection...\n");
-    printf("Wii: %s\n", WII_IP);
-    printf("Port: %d\n", TCP_PORT);
+    printf("Connecting to Wii %s...\n", WII_IP);
 
-    int sock = socket(AF_INET, SOCK_STREAM, 0);
+    sock = socket(AF_INET, SOCK_STREAM, 0);
     if (sock < 0) {
         char detail[96];
         snprintf(detail, sizeof(detail), "socket() failed. Error: %d", errno);
-        show_tcp_result("TCP SOCKET FAILED", detail);
+        show_result("TCP SOCKET FAILED", detail);
         return 0;
     }
 
@@ -175,46 +187,49 @@ int main(void)
     server.sin_port = htons(TCP_PORT);
     server.sin_addr.s_addr = inet_addr(WII_IP);
 
-    printf("\nConnecting to Wii...\n");
     if (connect(sock, (struct sockaddr *)&server, sizeof(server)) < 0) {
         char detail[128];
-        snprintf(detail, sizeof(detail), "connect() failed. Error: %d\nCheck that Wii server is waiting on port %d.", errno, TCP_PORT);
+        snprintf(detail, sizeof(detail), "connect() failed: %d\nCheck that the Wii server is ready.", errno);
         close(sock);
-        show_tcp_result("COULD NOT CONNECT TO WII", detail);
+        show_result("COULD NOT CONNECT TO WII", detail);
         return 0;
     }
 
-    const char message[] = "HELLO FROM DSI";
-    int sent = send(sock, message, sizeof(message) - 1, 0);
-    if (sent <= 0) {
-        char detail[96];
-        snprintf(detail, sizeof(detail), "send() failed. Error: %d", errno);
-        close(sock);
-        show_tcp_result("CONNECTED, BUT SEND FAILED", detail);
-        return 0;
+    consoleClear();
+    printf("Wii-DSi Link: CONNECTED!\n");
+    printf("--------------------------------\n");
+    printf("Touch and drag the stylus.\n");
+    printf("The Wii cursor should follow.\n\n");
+    printf("START: disconnect and exit\n");
+
+    while (1) {
+        touchPosition touch;
+        unsigned char packet[PACKET_SIZE] = {0, 0, 0, 0, 0};
+        swiWaitForVBlank();
+        scanKeys();
+
+        if (keysDown() & KEY_START)
+            break;
+
+        if (keysHeld() & KEY_TOUCH) {
+            touchRead(&touch);
+            packet[0] = 1;
+            packet[1] = (unsigned char)((touch.px >> 8) & 0xFF);
+            packet[2] = (unsigned char)(touch.px & 0xFF);
+            packet[3] = (unsigned char)((touch.py >> 8) & 0xFF);
+            packet[4] = (unsigned char)(touch.py & 0xFF);
+
+            if (send_all(sock, packet, PACKET_SIZE) < 0)
+                break;
+            was_touching = 1;
+        } else if (was_touching) {
+            if (send_all(sock, packet, PACKET_SIZE) < 0)
+                break;
+            was_touching = 0;
+        }
     }
 
-    char reply[128];
-    memset(reply, 0, sizeof(reply));
-    int received = recv(sock, reply, sizeof(reply) - 1, 0);
     close(sock);
-
-    if (received > 0) {
-        reply[received] = '\0';
-        consoleClear();
-        printf("Wii-DSi-Link - TCP result\n");
-        printf("--------------------------------\n");
-        printf("TCP CONNECTION: SUCCESS\n");
-        printf("Message sent to Wii:\n%s\n", message);
-        printf("\nReply from Wii:\n%s\n", reply);
-        printf("\nDSi <-> Wii communication works!\n");
-        printf("\nPress START to exit.\n");
-        wait_for_start();
-    } else {
-        char detail[96];
-        snprintf(detail, sizeof(detail), "No reply received. recv()=%d error=%d", received, errno);
-        show_tcp_result("CONNECTED, BUT NO REPLY", detail);
-    }
-
+    show_result("Disconnected.", "Touchpad test finished.");
     return 0;
 }
