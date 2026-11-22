@@ -1,6 +1,7 @@
 #include <nds.h>
 #include <dswifi9.h>
 #include <stdio.h>
+#include <arpa/inet.h>
 #include <string.h>
 
 #define TARGET_SSID "FIBERNET"
