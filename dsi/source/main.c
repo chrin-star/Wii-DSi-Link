@@ -116,11 +116,15 @@ int main(void)
             break;
 
         if ((frames % 60) == 0) {
+            struct in_addr gateway = {0}, mask = {0}, dns1 = {0}, dns2 = {0};
+            struct in_addr ip = Wifi_GetIPInfo(&gateway, &mask, &dns1, &dns2);
             consoleClear();
             printf("Connecting to %s...\n", TARGET_SSID);
             printf("--------------------------------\n");
             printf("Status: %d\n", status);
             printf("Elapsed: %d seconds\n", frames / 60);
+            printf("DSi IP: %s\n", inet_ntoa(ip));
+            printf("Gateway: %s\n", inet_ntoa(gateway));
             printf("\nPlease wait...\n");
             printf("START: cancel\n");
         }
@@ -130,6 +134,14 @@ int main(void)
     consoleClear();
     printf("Wii-DSi-Link - Connection result\n");
     printf("--------------------------------\n");
+    {
+        struct in_addr gateway = {0}, mask = {0}, dns1 = {0}, dns2 = {0};
+        struct in_addr ip = Wifi_GetIPInfo(&gateway, &mask, &dns1, &dns2);
+        printf("DSi IP: %s\n", inet_ntoa(ip));
+        printf("Gateway: %s\n", inet_ntoa(gateway));
+        printf("Subnet: %s\n", inet_ntoa(mask));
+        printf("DNS: %s\n", inet_ntoa(dns1));
+    }
     if (status == ASSOCSTATUS_ASSOCIATED) {
         printf("WIFI CONNECTION: SUCCESS\n");
         printf("Network: %s\n", TARGET_SSID);
