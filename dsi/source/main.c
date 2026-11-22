@@ -13,7 +13,7 @@ int main(void)
     iprintf("Connecting DSi XL to saved Wi-Fi...\n");
     iprintf("Please wait.\n\n");
 
-    if (!Wifi_InitDefault(WFC_CONNECT | WIFI_ATTEMPT_DSI_MODE)) {
+    if (!Wifi_InitDefault(WFC_CONNECT)) {
         iprintf("Wi-Fi connection failed.\n");
         iprintf("Check the DSi Internet settings.\n");
     } else {
