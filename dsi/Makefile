@@ -12,7 +12,7 @@ BUILD := build
 SOURCES := source
 DATA :=
 INCLUDES :=
-LIBS := -lnds9
+LIBS := -ldswifi9 -lnds9
 LIBDIRS := $(LIBNDS)
 
 ifneq ($(BUILD),$(notdir $(CURDIR)))
