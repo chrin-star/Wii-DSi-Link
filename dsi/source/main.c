@@ -10,13 +10,13 @@ int main(void)
     int frames = 0;
 
     consoleDemoInit();
-    iprintf("\nWii-DSi-Link - DSi Wi-Fi test\n");
-    iprintf("--------------------------------\n");
-    iprintf("Initializing DSi Wi-Fi mode...\n");
+    printf("\nWii-DSi-Link - DSi Wi-Fi test\n");
+    printf("--------------------------------\n");
+    printf("Initializing DSi Wi-Fi mode...\n");
 
     if (!Wifi_InitDefault(INIT_ONLY | WIFI_ATTEMPT_DSI_MODE)) {
-        iprintf("DSi Wi-Fi initialization failed.\n");
-        iprintf("\nPress START to exit.\n");
+        printf("DSi Wi-Fi initialization failed.\n");
+        printf("\nPress START to exit.\n");
         while (1) {
             swiWaitForVBlank();
             scanKeys();
@@ -25,8 +25,8 @@ int main(void)
         }
     }
 
-    iprintf("DSi Wi-Fi mode initialized.\n");
-    iprintf("Connecting to saved network...\n");
+    printf("DSi Wi-Fi mode initialized.\n");
+    printf("Connecting to saved network...\n");
     Wifi_AutoConnect();
 
     while (frames < 3600) {
@@ -42,36 +42,36 @@ int main(void)
 
         if ((frames % 30) == 0) {
             consoleClear();
-            iprintf("Wii-DSi-Link - DSi Wi-Fi test\n");
-            iprintf("--------------------------------\n");
-            iprintf("Connecting to saved network...\n");
-            iprintf("Connection status: %d\n", status);
-            iprintf("Elapsed: %d seconds\n", frames / 60);
-            iprintf("\nSTART: cancel\n");
+            printf("Wii-DSi-Link - DSi Wi-Fi test\n");
+            printf("--------------------------------\n");
+            printf("Connecting to saved network...\n");
+            printf("Connection status: %d\n", status);
+            printf("Elapsed: %d seconds\n", frames / 60);
+            printf("\nSTART: cancel\n");
         }
         frames++;
     }
 
     consoleClear();
-    iprintf("Wii-DSi-Link - DSi Wi-Fi test\n");
-    iprintf("--------------------------------\n");
+    printf("Wii-DSi-Link - DSi Wi-Fi test\n");
+    printf("--------------------------------\n");
 
     if (status == ASSOCSTATUS_ASSOCIATED) {
         ip = Wifi_GetIPInfo(&gateway, &mask, &dns1, &dns2);
-        iprintf("Wi-Fi connected successfully!\n");
-        iprintf("DSi IP: %s\n", inet_ntoa(ip));
-        iprintf("Gateway: %s\n", inet_ntoa(gateway));
-        iprintf("\nWii IP: 192.168.1.5\n");
+        printf("Wi-Fi connected successfully!\n");
+        printf("DSi IP: %s\n", inet_ntoa(ip));
+        printf("Gateway: %s\n", inet_ntoa(gateway));
+        printf("\nWii IP: 192.168.1.5\n");
     } else if (status == ASSOCSTATUS_CANNOTCONNECT) {
-        iprintf("Could not connect to saved Wi-Fi.\n");
-        iprintf("Association status: %d\n", status);
-        iprintf("Check saved network settings.\n");
+        printf("Could not connect to saved Wi-Fi.\n");
+        printf("Association status: %d\n", status);
+        printf("Check saved network settings.\n");
     } else {
-        iprintf("Connection timed out or cancelled.\n");
-        iprintf("Last status: %d\n", status);
+        printf("Connection timed out or cancelled.\n");
+        printf("Last status: %d\n", status);
     }
 
-    iprintf("\nPress START to exit.\n");
+    printf("\nPress START to exit.\n");
     while (1) {
         swiWaitForVBlank();
         scanKeys();
